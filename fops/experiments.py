@@ -13,7 +13,7 @@ from .tasks import *
 from .networks import *
 
 
-def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-2, training_steps=100):
+def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-2, training_steps=1000):
 
 	dataset = gen_dataset()
 
@@ -36,10 +36,15 @@ def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-2
 
 		return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, eval_metric_ops=metrics)
 
+	def gen_input_fn(data):
+		def input_fn():
+			dataset = tf.data.Dataset.from_tensor_slices(data)
+			return dataset.batch(batch_size)
+		return input_fn
 
 	estimator = tf.estimator.Estimator(model_fn=model_fn,params={})
-	estimator.train(input_fn=lambda:dataset.train, steps=training_steps)
-	evaluation = estimator.evaluate(input_fn=lambda:dataset.test, steps=dataset.test.shape[0])
+	estimator.train(input_fn=gen_input_fn(dataset.train), steps=round(training_steps * dataset.train.shape[0] / batch_size))
+	evaluation = estimator.evaluate(input_fn=gen_input_fn(dataset.test), steps=round(dataset.test.shape[0] / batch_size))
 
 	return evaluation
 
@@ -52,10 +57,12 @@ def run_all():
 	with tf.gfile.GFile("./output.csv", "w+") as csvfile:
 		writer = csv.writer(csvfile)
 		writer.writerow(header)
+		print(header)
 
-		for tk, task in tasks.items():
-			for nk, network in networks.items():
-				for dk, gen_dataset in datasets.items():
+		for nk, network in networks.items():
+			for dk, gen_dataset in datasets.items():
+				for tk, task in tasks.items():			
+
 					result = run_experiment(task, network, gen_dataset)
 					row = [
 						tk, dk, nk.type, nk.layers, nk.activation, result["accuracy"], result["loss"]
