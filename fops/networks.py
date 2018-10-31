@@ -4,6 +4,7 @@ import numpy as np
 from collections import namedtuple
 
 from .layers import *
+from .datasets import bus_width
 
 activations = ["tanh", "relu", "sigmoid", "softmax", "selu", "linear", 'abs', 'tanh_abs']
 
@@ -32,7 +33,7 @@ for depth in range(5):
 				v_new = layer_dense(v, bus_width, activation)
 				if v.shape == v_name.shape:
 					v = v + v_new
-					
+
 			if v.shape[-1] != output_width:
 				v = layer_dense(v, output_width, "linear")
 			return v

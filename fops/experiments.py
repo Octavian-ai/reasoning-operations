@@ -17,6 +17,7 @@ def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-2
 
 	dataset = gen_dataset()
 
+	assert len(dataset.train.shape) == 3, f"Train dataset missing dimensions, {dataset.train.shape} {dataset}"
 	assert len(dataset.test.shape) == 3, f"Test dataset missing dimensions, {dataset.test.shape} {dataset}"
 	assert dataset.train.shape[1] == 2, f"Train dataset not expected shape {dataset.train.shape}"
 	assert dataset.test.shape[1]  == 2, f"Test dataset not expected shape {dataset.test.shape}"
