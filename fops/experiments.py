@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 from collections import namedtuple
+import csv
 
 # Make TF be quiet
 import os
@@ -40,7 +41,7 @@ def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-2
 	estimator.train(input_fn=lambda:dataset.train, steps=training_steps)
 	evaluation = estimator.evaluate(input_fn=lambda:dataset.test, steps=dataset.test.shape[0])
 
-	return evaluation["accuracy"]
+	return evaluation
 
 def run_all():
 
