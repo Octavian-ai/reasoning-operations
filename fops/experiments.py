@@ -37,13 +37,16 @@ def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-3
 
 	return evaluation["accuracy"]
 
+def run_all():
+	for tk, task in tasks.items():
+		for nk, network in networks.items():
+			for dk, gen_dataset in datasets.items():
+				result = run_experiment(task, network, gen_dataset)
+				print(tk, nk, dk, result)
 
 
 
-for tk, task in tasks.items():
-	for nk, network in networks.items():
-		for dk, gen_dataset in datasets.items():
-			result = run_experiment(task, network, gen_dataset)
-			print(tk, nk, dk, result)
+if __name__ == "__main__":
+	run_all()
 
 
