@@ -69,8 +69,8 @@ def gen_many_hot():
 	unique_pairs = list(unique_pairs)
 	unique_pairs = [i.v for i in unique_pairs]
 
-	train = np.array(unique_pairs[0:n_train])
-	test  = np.array(unique_pairs[n_train:n_test])
+	train = np.array(unique_pairs[0:n_train]).astype(np.float32)
+	test  = np.array(unique_pairs[n_train:][:n_test]).astype(np.float32)
 
 	return Dataset(train, test)
 
