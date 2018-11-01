@@ -15,4 +15,5 @@ ACTIVATION_FNS = {
 	"linear": tf.identity,
 	"id": tf.identity,
 	"selu": tf.nn.selu,
+	"softmax": tf.nn.softmax,
 }

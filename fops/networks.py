@@ -8,8 +8,7 @@ from .datasets import bus_width
 
 max_depth = 2
 
-activations = ["tanh", "relu", "sigmoid", "softmax", "selu", "linear", 'abs', 'tanh_abs']
-
+activations = ["linear", "tanh", "relu", "selu", 'abs', 'tanh_abs', "sigmoid", "softmax"]
 
 networks = {
 }
@@ -24,7 +23,7 @@ def concat(a, b, output_width):
 
 networks[Descriptor('concat', 1, "linear")] = concat
 
-for depth in range(max_depth):
+for depth in range(1, max_depth):
 	for activation in activations:
 		def d(a, b, output_width):
 			v = tf.concat([a,b],-1)
@@ -38,7 +37,7 @@ for depth in range(max_depth):
 		networks[Descriptor('dense', depth, activation)] = d
 
 
-for depth in range(max_depth):
+for depth in range(1, max_depth):
 	for activation in activations:
 		def d(a, b, output_width):
 			v = tf.concat([a,b],-1)

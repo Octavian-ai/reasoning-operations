@@ -13,6 +13,7 @@ name = "pypi"
 
 tensorflow = "*"
 numpy = "*"
+floyd-cli = "*"
 
 
 [requires]

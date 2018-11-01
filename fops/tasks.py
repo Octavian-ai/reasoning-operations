@@ -9,6 +9,15 @@ from .datasets import bus_width
 
 Task = namedtuple('Task', ['expected_fn', 'output_width'])
 
+def one_hot_sum(a,b):
+	a_int = tf.argmax(a, -1)
+	b_int = tf.argmax(b, -1)
+
+	c_int = a_int + b_int
+
+	return tf.one_hot(c_int, bus_width)
+
+
 tasks = {
 	"concat":			Task(lambda a, b: tf.concat([a,b], -1) * tf.get_variable("bias", [1,1], dtype=tf.float64), bus_width*2),
 	"equality":     	Task(lambda a, b: tf.cast(tf.equal(a, b),       tf.float32), bus_width),
@@ -19,4 +28,5 @@ tasks = {
 	"elementwise_mul":  Task(lambda a, b: tf.multiply(a, b), bus_width),
 	"reduce_sum":  		Task(lambda a, b: tf.reduce_sum(tf.concat([a, b], -1), -1, keepdims=True), 1),
 	"reduce_max":  		Task(lambda a, b: tf.reduce_max(tf.concat([a, b], -1), -1, keepdims=True), 1),
+	"one_hot_sum":		Task(one_hot_sum, bus_width)
 }

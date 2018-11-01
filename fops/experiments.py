@@ -19,7 +19,7 @@ from .hooks import *
 ACCURACY_TARGET = 0.99
 
 
-def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-1, training_steps=20*1000, accuracy_places=4, lr_decay_rate=1.0, model_dir=None,eval_every=60):
+def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-1, training_steps=20*1000, accuracy_places=2, lr_decay_rate=1.0, model_dir=None,eval_every=60):
 
 	dataset = gen_dataset()
 
@@ -89,11 +89,11 @@ def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-1
 
 def run_all():
 
-	tf.logging.set_verbosity("INFO")
+	tf.logging.set_verbosity("ERROR")
 
-	header = ["task", "dataset", "network_type", "network_depth", "network_activation", "accuracy", "loss","datetime"]
+	header = ["task", "dataset", "network_type", "network_depth", "network_activation", "accuracy_pct", "accuracy", "loss","lr","datetime"]
 
-	with tf.gfile.GFile("./output.csv", "wa+") as csvfile:
+	with tf.gfile.GFile("./output.csv", "a+") as csvfile:
 		writer = csv.writer(csvfile)
 		writer.writerow(header)
 		print(header)
@@ -102,22 +102,24 @@ def run_all():
 			for tk, task in tasks.items():	
 				for nk, network in networks.items():	
 
-					setup = [tk, dk, nk.type, nk.layers, nk.activation]	
+					setup = [tk, dk, nk.type, str(nk.layers), nk.activation]	
 
 					print("Finding best result for", setup)
 
-					result = grid_best(task, network, gen_dataset, '_'.join(setup))
+					result = grid_best(task, network, gen_dataset, '/'.join(setup))
 
 					row = setup + [
-						result["accuracy_pct"], result["loss"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+						result["accuracy_pct"], result["accuracy"], result["loss"], result["lr"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 					]
 					writer.writerow(row)
-					writer.flush()
+					csvfile.flush()
 					print(row)
 
 def LRRange(mul=3):
+
+	yield 1.7782794100389232e-05
 	
-	for i in range(mul*6, 0, -1):
+	for i in range(mul*5, 0, -1):
 		lr = pow(0.1, i/mul)
 		yield lr
 
@@ -132,17 +134,18 @@ def explore_lr():
 
 	gen_dataset = datasets["one_hot"]
 	task = tasks["concat"]
-	network = networks[Descriptor('dense', 1, "linear")]
+	network = networks[Descriptor('dense', 1, "selu")]
 
 	lr = 1.7782794100389232e-05
 	gr = 1e6
 
-	# for lr in LRRange():
-	result = run_experiment(task, network, gen_dataset, learning_rate=lr, lr_decay_rate=1.0, training_steps=100_000, model_dir=f"./model/concat_dense/{lr}")
-	print(lr, result["accuracy_pct"])
+	for lr in LRRange():
+		result = run_experiment(task, network, gen_dataset, learning_rate=lr, lr_decay_rate=1.0, training_steps=100_000, model_dir=f"./model/explore/{lr}")
+		print(lr, result["accuracy_pct"])
 
 
-def grid_best(task, network, gen_dataset, prefix, use_uuid=False):
+def grid_best(task, network, gen_dataset, prefix, use_uuid=False, improvement_error_threshold=0.1):
+
 	# Important: prefix needs to summarise the run uniquely if !use_uuid!
 
 	results = []
@@ -156,15 +159,16 @@ def grid_best(task, network, gen_dataset, prefix, use_uuid=False):
 		model_dir = os.path.join(*model_dir_parts)
 
 		result = run_experiment(task, network, gen_dataset, learning_rate=lr, lr_decay_rate=1.0, training_steps=100_000, model_dir=model_dir)
+		result["lr"] = lr
 		print("grid_best", lr, result["accuracy_pct"])
 		
 		if result["accuracy"] > ACCURACY_TARGET:
 			return result
 
-		if len(results) == 0 or result["loss"] < min([i["loss"] for i in results]):
+		if len(results) == 0 or result["accuracy"] >= max([i["accuracy"] for i in results]) - improvement_error_threshold:
 			results.append(result)
 		else:
-			return min(results, key=lambda i:i["loss"])
+			return max(results, key=lambda i:i["accuracy"])
 
 
 
