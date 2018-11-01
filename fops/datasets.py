@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 from collections import namedtuple
 
-n_train = 10_1000
+n_train = 1_000_000
 n_test = 400
 bus_width = 128
 
