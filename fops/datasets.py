@@ -4,8 +4,8 @@ import tensorflow as tf
 import numpy as np
 from collections import namedtuple
 
-n_train = 1000
-n_test = 100
+n_train = 10_1000
+n_test = 400
 bus_width = 128
 
 Dataset = namedtuple('Dataset', ['train', 'test'])
@@ -71,7 +71,7 @@ def gen_many_hot():
 
 	train = np.array(unique_pairs[0:n_train]).astype(np.float32)
 	test  = np.array(unique_pairs[n_train:][:n_test]).astype(np.float32)
-	
+
 	return Dataset(train, test)
 
 
@@ -84,8 +84,8 @@ def gen_random():
 
 
 datasets = {
-	"many_hot": gen_many_hot,
 	"one_hot": gen_one_hot,
+	"many_hot": gen_many_hot,
 	"random": gen_random,
 }
 

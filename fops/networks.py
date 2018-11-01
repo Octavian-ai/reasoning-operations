@@ -6,6 +6,8 @@ from collections import namedtuple
 from .layers import *
 from .datasets import bus_width
 
+max_depth = 2
+
 activations = ["tanh", "relu", "sigmoid", "softmax", "selu", "linear", 'abs', 'tanh_abs']
 
 
@@ -14,7 +16,15 @@ networks = {
 
 Descriptor = namedtuple('Descriptor', ['type', 'layers', 'activation'])
 
-for depth in range(5):
+def concat(a, b, output_width):
+	v = tf.concat([a,b], -1)
+	if v.shape[-1] != output_width:
+		v = tf.layers.dense(v, output_width)
+	return v
+
+networks[Descriptor('concat', 1, "linear")] = concat
+
+for depth in range(max_depth):
 	for activation in activations:
 		def d(a, b, output_width):
 			v = tf.concat([a,b],-1)
@@ -27,11 +37,14 @@ for depth in range(5):
 
 		networks[Descriptor('dense', depth, activation)] = d
 
+
+for depth in range(max_depth):
+	for activation in activations:
 		def d(a, b, output_width):
 			v = tf.concat([a,b],-1)
 			for i in range(depth):
 				v_new = layer_dense(v, bus_width, activation)
-				if v.shape == v_name.shape:
+				if v.shape == v_new.shape:
 					v = v + v_new
 
 			if v.shape[-1] != output_width:

@@ -10,6 +10,7 @@ from .datasets import bus_width
 Task = namedtuple('Task', ['expected_fn', 'output_width'])
 
 tasks = {
+	"concat":			Task(lambda a, b: tf.concat([a,b], -1) * tf.get_variable("bias", [1,1], dtype=tf.float64), bus_width*2),
 	"equality":     	Task(lambda a, b: tf.cast(tf.equal(a, b),       tf.float32), bus_width),
 	"logical_and":  	Task(lambda a, b: tf.cast(tf.logical_and(tf.cast(a, tf.bool), tf.cast(b, tf.bool)), tf.float32), bus_width),
 	"logical_or":  		Task(lambda a, b: tf.cast(tf.logical_or( tf.cast(a, tf.bool), tf.cast(b, tf.bool)), tf.float32), bus_width),

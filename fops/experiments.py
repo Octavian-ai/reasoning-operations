@@ -13,7 +13,7 @@ from .tasks import *
 from .networks import *
 
 
-def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-2, training_steps=1000):
+def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-1, training_steps=20*1000, accuracy_places=4, lr_decay_rate=1.0, model_dir=None):
 
 	dataset = gen_dataset()
 
@@ -27,12 +27,22 @@ def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-2
 		predictions = network(features[:,0,:], features[:,1,:], task.output_width)
 		labels = task.expected_fn(features[:,0,:], features[:,1,:])
 
+		lr = tf.train.exponential_decay(
+			learning_rate, tf.train.get_global_step(),
+			training_steps, lr_decay_rate)
+
 		loss = tf.losses.mean_squared_error(labels, predictions)
-		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+		optimizer = tf.train.AdamOptimizer(learning_rate=lr)
 		train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
 		metrics = {
-			"accuracy": tf.metrics.accuracy(labels=labels, predictions=predictions)
+			"accuracy": tf.metrics.accuracy(
+				labels=tf.zeros(tf.shape(labels)), 
+				predictions=tf.round(
+					(tf.cast(predictions,tf.float64) - tf.cast(labels,tf.float64)) * 
+					tf.cast(tf.pow(10.0,accuracy_places), tf.float64)
+				)
+			)
 		}
 
 		return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, eval_metric_ops=metrics)
@@ -43,9 +53,19 @@ def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-2
 			return dataset.batch(batch_size)
 		return input_fn
 
-	estimator = tf.estimator.Estimator(model_fn=model_fn,params={})
-	estimator.train(input_fn=gen_input_fn(dataset.train), steps=round(training_steps * dataset.train.shape[0] / batch_size))
+	estimator = tf.estimator.Estimator(model_fn=model_fn,params={}, model_dir=model_dir)
+
+	training_steps_calc = round(training_steps * dataset.train.shape[0] / batch_size)
+
+	train_spec = tf.estimator.TrainSpec(input_fn=gen_input_fn(dataset.train), max_steps=training_steps_calc)
+	eval_spec = tf.estimator.EvalSpec(input_fn=gen_input_fn(dataset.test))
+
+	tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+
+	# estimator.train(input_fn=gen_input_fn(dataset.train), steps=training_steps_calc)
 	evaluation = estimator.evaluate(input_fn=gen_input_fn(dataset.test), steps=round(dataset.test.shape[0] / batch_size))
+
+	evaluation["accuracy_pct"] = str(round(evaluation["accuracy"]*100))+"%"
 
 	return evaluation
 
@@ -60,19 +80,44 @@ def run_all():
 		writer.writerow(header)
 		print(header)
 
-		for nk, network in networks.items():
-			for dk, gen_dataset in datasets.items():
-				for tk, task in tasks.items():			
+		for dk, gen_dataset in datasets.items():
+			for tk, task in tasks.items():	
+				for nk, network in networks.items():		
 
 					result = run_experiment(task, network, gen_dataset)
 					row = [
-						tk, dk, nk.type, nk.layers, nk.activation, result["accuracy"], result["loss"]
+						tk, dk, nk.type, nk.layers, nk.activation, result["accuracy_pct"], result["loss"]
 					]
 					writer.writerow(row)
 					print(row)
 
+def LRRange(mul=5):
+	
+	for i in range(mul*6, 0, -1):
+		lr = pow(0.1, i/mul)
+		yield lr
+
+	for i in range(1, 2*mul+1):
+		lr = pow(10, i/mul)
+		yield lr
+
+
+def explore_lr():
+
+	tf.logging.set_verbosity("INFO")
+
+	gen_dataset = datasets["one_hot"]
+	task = tasks["concat"]
+	network = networks[Descriptor('dense', 1, "linear")]
+
+	# for lr in LRRange():
+	lr = 0.630957344480193
+	result = run_experiment(task, network, gen_dataset, learning_rate=lr, training_steps=1000, lr_decay_rate=0.0001, model_dir="./model/concat_dense")
+	print(lr, result["accuracy_pct"])
+
 
 if __name__ == "__main__":
-	run_all()
+	# run_all()
+	explore_lr()
 
 
