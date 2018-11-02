@@ -49,7 +49,7 @@ def run_experiment(task, network, gen_dataset, training_steps, batch_size=32, le
 					tf.cast(tf.pow(10.0,accuracy_places), tf.float64)
 				)
 			),
-			"learning_rate": tf.metrics.mean(lr),
+			"lr": tf.metrics.mean(lr),
 		}
 
 		hooks = [
@@ -79,7 +79,7 @@ def run_experiment(task, network, gen_dataset, training_steps, batch_size=32, le
 		start_delay_secs=5, throttle_secs=eval_every)
 
 	# tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
-	estimator.train(input_fn=gen_input_fn(dataset.train), steps=training_steps)
+	estimator.train(input_fn=gen_input_fn(dataset.train), max_steps=training_steps)
 
 	evaluation = estimator.evaluate(input_fn=gen_input_fn(dataset.test), steps=100)
 
@@ -99,8 +99,8 @@ def run_all(training_steps=10_000):
 		print(header)
 
 		for dk, gen_dataset in datasets.items():
-			for tk, task in tasks.items():	
-				for nk, network in networks.items():	
+			for nk, network in networks.items():
+				for tk, task in tasks.items():
 
 					setup = [tk, dk, nk.type, str(nk.layers), nk.activation]	
 
@@ -157,8 +157,8 @@ def grid_then_long(task, network, gen_dataset, prefix_parts, training_steps=10_0
 	print(result)
 	if result["accuracy"] > ACCURACY_TARGET:
 		return result
-		
-	model_dir = os.path.join("model", *prefix_parts, result["lr"], "10_000")
+
+	model_dir = os.path.join("model", *prefix_parts, str(result["lr"]), "10_000")
 	result = run_experiment(task, network, gen_dataset, training_steps=training_steps, learning_rate=result["lr"], model_dir=model_dir)
 	print(result)
 
@@ -180,7 +180,7 @@ def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvem
 		model_dir = os.path.join(*model_dir_parts)
 
 		result = run_experiment(task, network, gen_dataset, learning_rate=lr, lr_decay_rate=1.0, training_steps=training_steps, model_dir=model_dir)
-		result["lr"] = lr
+		result["lr"] = lr # Remove rounding corruption etc
 		print("grid_best", lr, result["accuracy_pct"])
 		
 		if result["accuracy"] > ACCURACY_TARGET:
