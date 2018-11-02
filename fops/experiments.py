@@ -21,7 +21,7 @@ ACCURACY_TARGET = 0.99
 
 
 def run_experiment(task, network, gen_dataset, training_steps, 
-	batch_size=32, learning_rate=1e-1, accuracy_places=2, lr_decay_rate=1.0, model_dir=None, eval_every=60,
+	batch_size=32, learning_rate=1e-1, accuracy_places=0.5, lr_decay_rate=1.0, model_dir=None, eval_every=60,
 	predict=False):
 
 	dataset = gen_dataset()
@@ -48,13 +48,14 @@ def run_experiment(task, network, gen_dataset, training_steps,
 			optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 			train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
+		delta_vec = tf.round(
+			(tf.cast(predictions,tf.float64) - tf.cast(labels,tf.float64)) * 
+			tf.cast(tf.pow(10.0,accuracy_places), tf.float64))
+
 		metrics = {
 			"accuracy": tf.metrics.accuracy(
 				labels=tf.zeros(tf.shape(labels)), 
-				predictions=tf.round(
-					(tf.cast(predictions,tf.float64) - tf.cast(labels,tf.float64)) * 
-					tf.cast(tf.pow(10.0,accuracy_places), tf.float64)
-				)
+				predictions=delta_vec,
 			),
 			"lr": tf.metrics.mean(lr),
 		}
@@ -66,7 +67,8 @@ def run_experiment(task, network, gen_dataset, training_steps,
 		predictions = {
 			"features": features,
 			"prediction": predictions,
-			"label": labels
+			"label": labels,
+			"delta_vec": delta_vec,
 		}
 
 		return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, eval_metric_ops=metrics, predictions=predictions, training_hooks=hooks)
@@ -216,7 +218,7 @@ def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvem
 
 def run_just():
 
-	task = tasks["reduce_sum"]
+	task = tasks["concat"]
 	gen_dataset = datasets["one_hot"]
 	network = networks[NetworkDescriptor('dense', 1, 'linear')]
 
@@ -224,7 +226,7 @@ def run_just():
 
 
 if __name__ == "__main__":
-	run_all(training_steps=100_000)
+	run_all(training_steps=30_000)
 	# explore_lr()
 	# run_just()
 
