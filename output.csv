@@ -1,7 +1,3 @@
-task,dataset,network_type,network_depth,network_activation,accuracy_pct,accuracy,loss,lr,datetime
-dot,one_hot,dense,1,linear,13.0%,0.13375,0.012408517,0.009999993,2018-11-02 13:08:46
-elementwise_mul,one_hot,dense,1,linear,29.0%,0.28830078,0.0006017668,0.009999993,2018-11-02 13:12:19
-reduce_max,one_hot,dense,1,linear,3.0%,0.033125,0.043408442,0.10000002,2018-11-02 13:20:18
-one_hot_sum,one_hot,dense,1,linear,25.0%,0.24558838,0.007700664,0.009999993,2018-11-02 13:24:03
-elementwise_add,one_hot,dense,1,linear,28.0%,0.28392333,0.00026421293,0.009999993,2018-11-02 13:27:47
-concat,one_hot,dense,1,linear,24.0%,0.24308471,0.0003513767,0.009999993,2018-11-02 13:31:49
+task,dataset,network_type,network_depth,network_activation,accuracy_pct,accuracy,loss,lr,global_step,datetime
+concat,one_hot,dense,1,linear,99.0%,0.99196655,0.007830548,0.0010000003,200,2018-11-02 14:04:13
+dot,one_hot,dense,1,linear,85.0%,0.8540625,0.030509032,0.009999993,30000,2018-11-02 14:06:30

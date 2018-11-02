@@ -218,11 +218,11 @@ def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvem
 
 def run_just():
 
-	task = tasks["concat"]
+	task = tasks["elementwise_add"]
 	gen_dataset = datasets["one_hot"]
 	network = networks[NetworkDescriptor('dense', 1, 'linear')]
 
-	run_experiment(task, network, gen_dataset, training_steps=1000, learning_rate=0.01, predict=True, model_dir="./model/run_just")
+	run_experiment(task, network, gen_dataset, training_steps=1000, learning_rate=0.01, predict=True, model_dir=f"./model/run_just/{uuid4()}")
 
 
 if __name__ == "__main__":
