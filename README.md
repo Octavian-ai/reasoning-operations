@@ -10,30 +10,18 @@ pipenv shell
 python -m fops.experiments
 ```
 
-Example (not correct yet!) output:
+Example output in `output.csv`:
 ```
-['task', 'dataset', 'network_type', 'network_depth', 'network_activation', 'accuracy', 'loss']
-['equality', 'one_hot', 'dense', 0, 'tanh', 0.0, 0.057277124]
-['logical_and', 'one_hot', 'dense', 0, 'tanh', 0.0, 0.010405544]
-['logical_or', 'one_hot', 'dense', 0, 'tanh', 0.0, 0.022145728]
-['logical_xor', 'one_hot', 'dense', 0, 'tanh', 0.0, 0.020593174]
-['elementwise_add', 'one_hot', 'dense', 0, 'tanh', 0.0, 0.022100633]
-['elementwise_mul', 'one_hot', 'dense', 0, 'tanh', 0.0, 0.0077557103]
-['reduce_sum', 'one_hot', 'dense', 0, 'tanh', 0.0, 0.14761811]
-['reduce_max', 'one_hot', 'dense', 0, 'tanh', 0.0, 0.0155320065]
-['equality', 'many_hot', 'dense', 0, 'tanh', 0.0, 0.013444532]
-['logical_and', 'many_hot', 'dense', 0, 'tanh', 1.0, 0.0]
-['logical_or', 'many_hot', 'dense', 0, 'tanh', 1.0, 0.0]
-['logical_xor', 'many_hot', 'dense', 0, 'tanh', 1.0, 0.0]
-['elementwise_add', 'many_hot', 'dense', 0, 'tanh', 1.0, 0.0]
-['elementwise_mul', 'many_hot', 'dense', 0, 'tanh', 1.0, 0.0]
-['reduce_sum', 'many_hot', 'dense', 0, 'tanh', 1.0, 0.0]
-['reduce_max', 'many_hot', 'dense', 0, 'tanh', 1.0, 0.0]
-['equality', 'random', 'dense', 0, 'tanh', 0.0, 0.5564104]
-['logical_and', 'random', 'dense', 0, 'tanh', 0.0, 3.3445785]
-['logical_or', 'random', 'dense', 0, 'tanh', 0.0, 0.50493354]
-['logical_xor', 'random', 'dense', 0, 'tanh', 0.0, 1.4137758]
-['elementwise_add', 'random', 'dense', 0, 'tanh', 0.0, 0.6893952]
-['elementwise_mul', 'random', 'dense', 0, 'tanh', 0.0, 0.44711256]
-['reduce_sum', 'random', 'dense', 0, 'tanh', 0.0, 16232.847]
+task,dataset,network_type,network_depth,network_activation,accuracy_pct,accuracy,loss,lr,datetime
+concat,one_hot,concat,1,linear,99.0%,0.9921875,0.02309635,1.7782794100389232e-05,2018-11-01 16:46:45
+concat,one_hot,dense,1,linear,100.0%,0.9999011,1.4289054e-06,1.7782794100389232e-05,2018-11-01 16:49:17
+concat,one_hot,dense,1,tanh,100.0%,1.0,3.806243e-07,1.0000000000000003e-05,2018-11-01 16:52:41
+concat,one_hot,dense,1,relu,100.0%,1.0,3.5620099e-07,1.7782794100389232e-05,2018-11-01 16:53:10
+concat,one_hot,dense,1,selu,100.0%,0.99797606,2.7229585e-06,1.7782794100389232e-05,2018-11-01 16:55:50
+concat,one_hot,dense,1,abs,100.0%,1.0,7.6925426e-07,2.1544346900318827e-05,2018-11-01 17:03:44
+concat,one_hot,dense,1,tanh_abs,100.0%,0.9997754,2.0966986e-06,1.7782794100389232e-05,2018-11-01 17:06:23
+concat,one_hot,dense,1,sigmoid,100.0%,0.9982654,2.6708472e-06,1.7782794100389232e-05,2018-11-01 17:09:01
+concat,one_hot,dense,1,softmax,100.0%,1.0,2.6764098e-07,1.7782794100389232e-05,2018-11-01 17:11:39
+concat,one_hot,dense_residual,1,linear,99.0%,0.9921875,0.0032360966,1.7782794100389232e-05,2018-11-01 17:11:56
+
 ```

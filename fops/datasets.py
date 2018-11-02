@@ -77,6 +77,11 @@ def gen_many_hot():
 
 
 def gen_random():
+	train = np.random.random_sample((n_train, 2, bus_width)) * 2.0 - 1.0
+	test = np.random.random_sample((n_test, 2, bus_width)) * 2.0 - 1.0
+	return Dataset(train, test)
+
+def gen_random_pos():
 	train = np.random.random_sample((n_train, 2, bus_width))
 	test = np.random.random_sample((n_test, 2, bus_width))
 	return Dataset(train, test)
@@ -86,6 +91,7 @@ def gen_random():
 datasets = {
 	"one_hot": gen_one_hot,
 	"many_hot": gen_many_hot,
+	"random_pos": gen_random,
 	"random": gen_random,
 }
 

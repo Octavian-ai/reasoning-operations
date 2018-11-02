@@ -19,7 +19,7 @@ from .hooks import *
 ACCURACY_TARGET = 0.99
 
 
-def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-1, training_steps=20*1000, accuracy_places=2, lr_decay_rate=1.0, model_dir=None,eval_every=60):
+def run_experiment(task, network, gen_dataset, training_steps, batch_size=32, learning_rate=1e-1, accuracy_places=2, lr_decay_rate=1.0, model_dir=None,eval_every=60):
 
 	dataset = gen_dataset()
 
@@ -87,7 +87,7 @@ def run_experiment(task, network, gen_dataset, batch_size=32, learning_rate=1e-1
 
 	return evaluation
 
-def run_all():
+def run_all(training_steps=10_000):
 
 	tf.logging.set_verbosity("ERROR")
 
@@ -106,7 +106,7 @@ def run_all():
 
 					print("Finding best result for", setup)
 
-					result = grid_best(task, network, gen_dataset, '/'.join(setup))
+					result = grid_then_long(task, network, gen_dataset, setup, training_steps=training_steps)
 
 					row = setup + [
 						result["accuracy_pct"], result["accuracy"], result["loss"], result["lr"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -117,34 +117,55 @@ def run_all():
 
 def LRRange(mul=3):
 
+	# yield 1.0000000000000003e-05
+	# yield 2.1544346900318827e-05
 	yield 1.7782794100389232e-05
+	yield 4.641588833612783e-05
+	yield 0.00010000000000000002
+	# yield 0.00021544346900318848
+	# yield 0.00046415888336127784
+	yield 0.0010000000000000002
+	# yield 0.0021544346900318847
+	# yield 0.004641588833612778
+	yield 0.010000000000000002
+	# yield 0.021544346900318836
+	# yield 0.0464158883361278
+	yield 0.1
+	# yield 0.2154434690031884
+	# yield 0.4641588833612779
+	yield 2.154434690031884
+	# yield 4.641588833612778
+	yield 10.0
+	# yield 21.544346900318832
+	# yield 46.4158883361278
+	yield 100.0
 	
-	for i in range(mul*5, 0, -1):
-		lr = pow(0.1, i/mul)
-		yield lr
+	# for i in range(mul*5, 0, -1):
+	# 	lr = pow(0.1, i/mul)
+	# 	yield lr
 
-	for i in range(1, 2*mul+1):
-		lr = pow(10, i/mul)
-		yield lr
+	# for i in range(1, 2*mul+1):
+	# 	lr = pow(10, i/mul)
+	# 	yield lr
 
 
-def explore_lr():
+def grid_then_long(task, network, gen_dataset, prefix_parts, training_steps=10_000):
 
 	# tf.logging.set_verbosity("INFO")
 
-	gen_dataset = datasets["one_hot"]
-	task = tasks["concat"]
-	network = networks[Descriptor('dense', 1, "selu")]
+	result = grid_best(task, network, gen_dataset, prefix_parts, training_steps=100)
+	print(result)
+	if result["accuracy"] > ACCURACY_TARGET:
+		return result
+		
+	model_dir = os.path.join("model", *prefix_parts, result["lr"], "10_000")
+	result = run_experiment(task, network, gen_dataset, training_steps=training_steps, learning_rate=result["lr"], model_dir=model_dir)
+	print(result)
 
-	lr = 1.7782794100389232e-05
-	gr = 1e6
-
-	for lr in LRRange():
-		result = run_experiment(task, network, gen_dataset, learning_rate=lr, lr_decay_rate=1.0, training_steps=100_000, model_dir=f"./model/explore/{lr}")
-		print(lr, result["accuracy_pct"])
+	return result
 
 
-def grid_best(task, network, gen_dataset, prefix, use_uuid=False, improvement_error_threshold=0.1):
+def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvement_error_threshold=0.1, training_steps=10_000):
 
 	# Important: prefix needs to summarise the run uniquely if !use_uuid!
 
@@ -152,13 +173,13 @@ def grid_best(task, network, gen_dataset, prefix, use_uuid=False, improvement_er
 
 	for lr in LRRange():
 
-		model_dir_parts = ["model", prefix, str(lr)]
+		model_dir_parts = ["model", *prefix_parts, str(lr), str(training_steps)]
 		if use_uuid:
 			model_dir_parts.append(str(uuid4()))
 
 		model_dir = os.path.join(*model_dir_parts)
 
-		result = run_experiment(task, network, gen_dataset, learning_rate=lr, lr_decay_rate=1.0, training_steps=100_000, model_dir=model_dir)
+		result = run_experiment(task, network, gen_dataset, learning_rate=lr, lr_decay_rate=1.0, training_steps=training_steps, model_dir=model_dir)
 		result["lr"] = lr
 		print("grid_best", lr, result["accuracy_pct"])
 		
@@ -168,14 +189,14 @@ def grid_best(task, network, gen_dataset, prefix, use_uuid=False, improvement_er
 		if len(results) == 0 or result["accuracy"] >= max([i["accuracy"] for i in results]) - improvement_error_threshold:
 			results.append(result)
 		else:
-			return max(results, key=lambda i:i["accuracy"])
+			break
 
-
+	return max(results, key=lambda i:i["accuracy"])
 
 
 
 if __name__ == "__main__":
-	run_all()
+	run_all(training_steps=10_000)
 	# explore_lr()
 
 
