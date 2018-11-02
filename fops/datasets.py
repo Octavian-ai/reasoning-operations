@@ -5,7 +5,7 @@ import numpy as np
 from collections import namedtuple
 
 n_train = 1_000_000
-n_test = 400
+n_test = 4_000
 bus_width = 128
 
 Dataset = namedtuple('Dataset', ['train', 'test'])

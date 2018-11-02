@@ -6,6 +6,7 @@ import csv
 from uuid import uuid4
 import os.path
 import datetime
+import itertools
 
 # Make TF be quiet
 import os
@@ -19,7 +20,9 @@ from .hooks import *
 ACCURACY_TARGET = 0.99
 
 
-def run_experiment(task, network, gen_dataset, training_steps, batch_size=32, learning_rate=1e-1, accuracy_places=2, lr_decay_rate=1.0, model_dir=None,eval_every=60):
+def run_experiment(task, network, gen_dataset, training_steps, 
+	batch_size=32, learning_rate=1e-1, accuracy_places=2, lr_decay_rate=1.0, model_dir=None, eval_every=60,
+	predict=False):
 
 	dataset = gen_dataset()
 
@@ -30,16 +33,20 @@ def run_experiment(task, network, gen_dataset, training_steps, batch_size=32, le
 
 	def model_fn(features, labels, mode, params):
 
-		predictions = network(features[:,0,:], features[:,1,:], task.output_width)
-		labels = task.expected_fn(features[:,0,:], features[:,1,:])
+		with tf.name_scope("network"):
+			predictions = network(features[:,0,:], features[:,1,:], task.output_width)
 
-		lr = tf.train.exponential_decay(
-			learning_rate, tf.train.get_global_step(),
-			training_steps, lr_decay_rate)
+		with tf.name_scope("task"):
+			labels = task.expected_fn(features[:,0,:], features[:,1,:])
 
-		loss = tf.losses.mean_squared_error(labels, predictions)
-		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-		train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
+		with tf.name_scope("loss_training"):
+			lr = tf.train.exponential_decay(
+				learning_rate, tf.train.get_global_step(),
+				training_steps, lr_decay_rate)
+
+			loss = tf.losses.mean_squared_error(labels, predictions)
+			optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+			train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
 		metrics = {
 			"accuracy": tf.metrics.accuracy(
@@ -56,7 +63,13 @@ def run_experiment(task, network, gen_dataset, training_steps, batch_size=32, le
 			EarlyStoppingHook(metrics["accuracy"], ACCURACY_TARGET)
 		]
 
-		return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, eval_metric_ops=metrics, training_hooks=hooks)
+		predictions = {
+			"features": features,
+			"prediction": predictions,
+			"label": labels
+		}
+
+		return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, eval_metric_ops=metrics, predictions=predictions, training_hooks=hooks)
 
 	def gen_input_fn(data):
 		# def input_fn():
@@ -83,6 +96,11 @@ def run_experiment(task, network, gen_dataset, training_steps, batch_size=32, le
 
 	evaluation = estimator.evaluate(input_fn=gen_input_fn(dataset.test), steps=100)
 
+	if predict:
+		results = estimator.predict(input_fn=gen_input_fn(dataset.test))
+		for i in itertools.islice(results, 3):
+			print(i)
+
 	evaluation["accuracy_pct"] = str(round(evaluation["accuracy"]*100))+"%"
 
 	return evaluation
@@ -91,7 +109,8 @@ def run_all(training_steps=10_000):
 
 	tf.logging.set_verbosity("ERROR")
 
-	header = ["task", "dataset", "network_type", "network_depth", "network_activation", "accuracy_pct", "accuracy", "loss","lr","datetime"]
+	header = ["task", "dataset", "network_type", "network_depth", "network_activation",
+		"accuracy_pct", "accuracy", "loss","lr", "global_step", "datetime"]
 
 	with tf.gfile.GFile("./output.csv", "a+") as csvfile:
 		writer = csv.writer(csvfile)
@@ -109,7 +128,8 @@ def run_all(training_steps=10_000):
 					result = grid_then_long(task, network, gen_dataset, setup, training_steps=training_steps)
 
 					row = setup + [
-						result["accuracy_pct"], result["accuracy"], result["loss"], result["lr"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+						result["accuracy_pct"], result["accuracy"], result["loss"], 
+						result["lr"], result["global_step"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 					]
 					writer.writerow(row)
 					csvfile.flush()
@@ -194,9 +214,18 @@ def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvem
 	return max(results, key=lambda i:i["accuracy"])
 
 
+def run_just():
+
+	task = tasks["reduce_sum"]
+	gen_dataset = datasets["one_hot"]
+	network = networks[NetworkDescriptor('dense', 1, 'linear')]
+
+	run_experiment(task, network, gen_dataset, training_steps=1000, learning_rate=0.01, predict=True, model_dir="./model/run_just")
+
 
 if __name__ == "__main__":
-	run_all(training_steps=10_000)
+	run_all(training_steps=100_000)
 	# explore_lr()
+	# run_just()
 
 

@@ -1,2 +1,3 @@
 task,dataset,network_type,network_depth,network_activation,accuracy_pct,accuracy,loss,lr,datetime
-equality,one_hot,dense,1,linear,98.0%,0.98477054,0.015229492,0.10000002,2018-11-02 11:11:01
+dot,one_hot,dense,1,linear,13.0%,0.13375,0.012408517,0.009999993,2018-11-02 13:08:46
+elementwise_mul,one_hot,dense,1,linear,29.0%,0.28830078,0.0006017668,0.009999993,2018-11-02 13:12:19
