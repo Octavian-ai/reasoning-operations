@@ -7,7 +7,7 @@ This code explores how basic networks (e.g. dense layers) can perform fundamenta
 ```shell
 pipenv install
 pipenv shell
-python -m fops.experiments
+python -m fops.run_all_experiments
 ```
 
 Example output in `output.csv`:

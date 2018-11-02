@@ -12,6 +12,10 @@ import itertools
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
+import logging
+logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO)
+
 from .datasets import *
 from .tasks import *
 from .networks import *
@@ -68,19 +72,21 @@ def run_experiment(task, network, gen_dataset, training_steps,
 			"features": features,
 			"prediction": predictions,
 			"label": labels,
-			"delta_vec": delta_vec,
+			"delta_vec": delta_vec
 		}
 
 		return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, eval_metric_ops=metrics, predictions=predictions, training_hooks=hooks)
 
-	def gen_input_fn(data):
+	def gen_input_fn(data, repeat=True):
 		# def input_fn():
 		# 	dataset = tf.data.Dataset.from_tensor_slices(data)
 		# 	dataset = dataset.batch(batch_size)
 		# 	dataset = dataset.repeat()
 		# 	return dataset
 
-		return tf.estimator.inputs.numpy_input_fn(x=data, num_epochs=None, shuffle=True, batch_size=batch_size)
+		num_epochs = None if repeat else 1
+
+		return tf.estimator.inputs.numpy_input_fn(x=data, num_epochs=num_epochs, shuffle=True, batch_size=batch_size)
 		# return input_fn
 
 
@@ -89,25 +95,28 @@ def run_experiment(task, network, gen_dataset, training_steps,
 
 	estimator = tf.estimator.Estimator(model_fn=model_fn,params={}, model_dir=model_dir, config=run_config)
 
-	train_spec = tf.estimator.TrainSpec(input_fn=gen_input_fn(dataset.train), max_steps=training_steps)
-	eval_spec = tf.estimator.EvalSpec(input_fn=gen_input_fn(dataset.test),
-		start_delay_secs=5, throttle_secs=eval_every)
+	# train_spec = tf.estimator.TrainSpec(input_fn=gen_input_fn(dataset.train), max_steps=training_steps)
+	# eval_spec = tf.estimator.EvalSpec(input_fn=gen_input_fn(dataset.test, False),
+	# 	start_delay_secs=5, throttle_secs=eval_every)
 
 	# tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 	estimator.train(input_fn=gen_input_fn(dataset.train), max_steps=training_steps)
 
-	evaluation = estimator.evaluate(input_fn=gen_input_fn(dataset.test), steps=100)
+	evaluation = estimator.evaluate(input_fn=gen_input_fn(dataset.test, False))
 
 	if predict:
-		results = estimator.predict(input_fn=gen_input_fn(dataset.test))
-		for i in itertools.islice(results, 3):
+		results = estimator.predict(input_fn=gen_input_fn(dataset.test, False))
+		for idx, i in itertools.slice(enumerate(results), 10):
+			# if np.sum(i["delta_vec"]) > 0.0:
 			print(i)
+			# else:
+				# print(f"correct {idx}")
 
 	evaluation["accuracy_pct"] = str(round(evaluation["accuracy"]*100))+"%"
 
 	return evaluation
 
-def run_all(training_steps=10_000):
+def run_all(training_steps=30_000):
 
 	tf.logging.set_verbosity("ERROR")
 
@@ -213,21 +222,19 @@ def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvem
 		else:
 			break
 
-	return max(results, key=lambda i:i["accuracy"])
+	return min(results, key=lambda i:i["loss"])
 
 
-def run_just():
+def run_just_one():
 
-	task = tasks["elementwise_add"]
+	task = tasks["reduce_sum"]
 	gen_dataset = datasets["one_hot"]
 	network = networks[NetworkDescriptor('dense', 1, 'linear')]
 
-	run_experiment(task, network, gen_dataset, training_steps=1000, learning_rate=0.01, predict=True, model_dir=f"./model/run_just/{uuid4()}")
-
+	evaluation = run_experiment(task, network, gen_dataset, training_steps=30_000, learning_rate=0.1, predict=True, model_dir=f"./model/run_just/{uuid4()}")
+	print(evaluation)
 
 if __name__ == "__main__":
-	run_all(training_steps=30_000)
-	# explore_lr()
-	# run_just()
+	run_all()
 
 
