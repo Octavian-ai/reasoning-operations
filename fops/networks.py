@@ -46,8 +46,8 @@ for depth in range(1, max_depth+1):
 
 
 def multiply(a, b, output_width):
-	a = layer_dense(a, bus_width)
-	b = layer_dense(b, bus_width)
+	a = layer_dense(a, inner_width)
+	b = layer_dense(b, inner_width)
 	c = tf.multiply(a,b)
 	return layer_dense(c, output_width)
 

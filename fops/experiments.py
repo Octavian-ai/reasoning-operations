@@ -106,12 +106,9 @@ def run_experiment(task, network, gen_dataset, training_steps,
 
 	if predict:
 		results = estimator.predict(input_fn=gen_input_fn(dataset.test, False))
-		for idx, i in itertools.slice(enumerate(results), 10):
-			# if np.sum(i["delta_vec"]) > 0.0:
+		for idx, i in itertools.islice(enumerate(results), 3):
 			print(i)
-			# else:
-				# print(f"correct {idx}")
-
+	
 	evaluation["accuracy_pct"] = str(round(evaluation["accuracy"]*100))+"%"
 
 	return evaluation
@@ -128,6 +125,8 @@ def run_all(training_steps=30_000):
 		writer.writerow(header)
 		print(header)
 
+		results = []
+
 		for dk, gen_dataset in datasets.items():
 			for nk, network in networks.items():
 				for tk, task in tasks.items():
@@ -136,12 +135,18 @@ def run_all(training_steps=30_000):
 
 					print("Finding best result for", setup)
 
-					result = grid_then_long(task, network, gen_dataset, setup, training_steps=training_steps)
+					if len(results) > 0:
+						lslr = results[-1]["lr"]
+					else:
+						lslr = None
+
+					result = grid_then_long(task, network, gen_dataset, setup, training_steps=training_steps, last_successful_lr=lslr)
 
 					row = setup + [
 						result["accuracy_pct"], result["accuracy"], result["loss"], 
 						result["lr"], result["global_step"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 					]
+					results.append(result)
 					writer.writerow(row)
 					csvfile.flush()
 					print(row)
@@ -150,21 +155,21 @@ def LRRange(mul=3):
 
 	# yield 1.0000000000000003e-05
 	# yield 2.1544346900318827e-05
-	yield 1.7782794100389232e-05
-	yield 4.641588833612783e-05
-	yield 0.00010000000000000002
+	yield 0.000001
+	yield 0.00001
+	yield 0.0001
 	# yield 0.00021544346900318848
 	# yield 0.00046415888336127784
-	yield 0.0010000000000000002
+	yield 0.001
 	# yield 0.0021544346900318847
 	# yield 0.004641588833612778
-	yield 0.010000000000000002
+	yield 0.01
 	# yield 0.021544346900318836
 	# yield 0.0464158883361278
 	yield 0.1
 	# yield 0.2154434690031884
 	# yield 0.4641588833612779
-	yield 2.154434690031884
+	yield 1.0
 	# yield 4.641588833612778
 	yield 10.0
 	# yield 21.544346900318832
@@ -180,29 +185,33 @@ def LRRange(mul=3):
 	# 	yield lr
 
 
-def grid_then_long(task, network, gen_dataset, prefix_parts, training_steps=10_000):
+def grid_then_long(task, network, gen_dataset, prefix_parts, training_steps=10_000, last_successful_lr=None):
 
 	# tf.logging.set_verbosity("INFO")
 
-	result = grid_best(task, network, gen_dataset, prefix_parts, training_steps=100)
-	print(result)
+	result = grid_best(task, network, gen_dataset, prefix_parts, training_steps=1000, last_successful_lr=last_successful_lr)
 	if result["accuracy"] > ACCURACY_TARGET:
 		return result
 
 	model_dir = os.path.join("model", *prefix_parts, str(result["lr"]), "10_000")
 	result = run_experiment(task, network, gen_dataset, training_steps=training_steps, learning_rate=result["lr"], model_dir=model_dir)
-	print(result)
-
+	
 	return result
 
 
-def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvement_error_threshold=0.1, training_steps=10_000):
+def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvement_error_threshold=0.7, training_steps=10_000, last_successful_lr=None):
 
 	# Important: prefix needs to summarise the run uniquely if !use_uuid!
 
 	results = []
 
-	for lr in LRRange():
+	def lslr():
+		if last_successful_lr is not None:
+			yield last_successful_lr
+
+	decreases = 0
+
+	for lr in itertools.chain(lslr(), LRRange()):
 
 		model_dir_parts = ["model", *prefix_parts, str(lr), str(training_steps)]
 		if use_uuid:
@@ -214,12 +223,18 @@ def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvem
 		result["lr"] = lr # Remove rounding corruption etc
 		print("grid_best", lr, result["accuracy_pct"])
 		
-		if result["accuracy"] > ACCURACY_TARGET:
+		if result["accuracy"] >= ACCURACY_TARGET:
 			return result
 
-		if len(results) == 0 or result["accuracy"] >= max([i["accuracy"] for i in results]) - improvement_error_threshold:
-			results.append(result)
-		else:
+		results.append(result)
+
+		if len(results) >= 2:
+			if results[-1]["accuracy"] < results[-2]["accuracy"] * improvement_error_threshold:
+				logger.info("Accuracy decreased from last run")
+				decreases += 1
+
+		if decreases >= 2:
+			logger.info("Stopping LR search as acc decreased twice")
 			break
 
 	return min(results, key=lambda i:i["loss"])
@@ -231,7 +246,7 @@ def run_just_one():
 	gen_dataset = datasets["one_hot"]
 	network = networks[NetworkDescriptor('dense', 1, 'linear')]
 
-	evaluation = run_experiment(task, network, gen_dataset, training_steps=30_000, learning_rate=0.1, predict=True, model_dir=f"./model/run_just/{uuid4()}")
+	evaluation = run_experiment(task, network, gen_dataset, training_steps=30_000, learning_rate=0.01, predict=True, model_dir=f"./model/run_just/{uuid4()}")
 	print(evaluation)
 
 if __name__ == "__main__":
