@@ -89,9 +89,9 @@ def gen_random_pos():
 
 
 datasets = {
+	"random": gen_random,
 	"random_pos": gen_random,
 	"one_hot": gen_one_hot,
 	"many_hot": gen_many_hot,
-	"random": gen_random,
 }
 

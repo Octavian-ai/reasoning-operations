@@ -127,8 +127,8 @@ def run_all(training_steps=30_000):
 
 		results = []
 
-		for dk, gen_dataset in datasets.items():
-			for nk, network in networks.items():
+		for nk, network in networks.items():
+			for dk, gen_dataset in datasets.items():
 				for tk, task in tasks.items():
 
 					setup = [tk, dk, nk.type, str(nk.layers), nk.activation]	
@@ -194,9 +194,12 @@ def grid_then_long(task, network, gen_dataset, prefix_parts, training_steps=10_0
 		return result
 
 	model_dir = os.path.join("model", *prefix_parts, str(result["lr"]), "10_000")
-	result = run_experiment(task, network, gen_dataset, training_steps=training_steps, learning_rate=result["lr"], model_dir=model_dir)
-	
-	return result
+	result2 = run_experiment(task, network, gen_dataset, training_steps=training_steps, learning_rate=result["lr"], model_dir=model_dir)
+
+	if result2["accuracy"] > result["accuracy"]:
+		return result2
+	else
+		return result
 
 
 def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvement_error_threshold=0.7, training_steps=10_000, last_successful_lr=None):
