@@ -40,9 +40,10 @@ def add_dense_network(depth, activation, include_residual=False):
 	r = "_residual" if include_residual else ""
 	networks[NetworkDescriptor('dense'+r, depth, activation)] = d
 
-for depth in range(1, max_depth+1):
-	for activation in activations:
-		add_dense_network(depth, activation)
+# Already run
+# for depth in range(1, max_depth+1):
+# 	for activation in activations:
+# 		add_dense_network(depth, activation)
 
 
 def multiply(a, b, output_width):
@@ -51,8 +52,8 @@ def multiply(a, b, output_width):
 	c = tf.multiply(a,b)
 	return layer_dense(c, output_width)
 
-networks[NetworkDescriptor('multiply', 1, "linear")] = multiply
-
+# Already run
+# networks[NetworkDescriptor('multiply', 1, "linear")] = multiply
 
 
 for depth in [2, 3]:

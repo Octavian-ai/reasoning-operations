@@ -198,7 +198,7 @@ def grid_then_long(task, network, gen_dataset, prefix_parts, training_steps=10_0
 
 	if result2["accuracy"] > result["accuracy"]:
 		return result2
-	else
+	else:
 		return result
 
 
