@@ -1,6 +1,10 @@
 # Experiment to see how different neural networks perform fundamental reasoning operations
 
-This code explores how basic networks (e.g. dense layers) can perform fundamental reasoning operations (logical, arithmetic etc)
+> We ran 1,300 different training experiments to try a large range of different neural network architectures on basic arithmetic, logic and integer tasks. We tested on four different datasets. Surprisingly, the best performing network was one incorporating element-wise multiplication, an infrequently used component in today’s networks. We encourage further experimentation and usage of element-wise multiplication.
+
+This code explores how basic networks (e.g. dense layers) can perform fundamental reasoning operations (logical, arithmetic etc).
+
+[See our writeup of the experiment and results](https://medium.com/octavian-ai/incorporating-element-wise-multiplication-can-out-perform-dense-layers-in-neural-networks-c2d807f9fdc2).
 
 ## Running
 
