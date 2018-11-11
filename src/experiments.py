@@ -25,10 +25,15 @@ ACCURACY_TARGET = 0.99
 
 
 def run_experiment(task, network, gen_dataset, training_steps, 
-	batch_size=32, learning_rate=1e-1, accuracy_places=0.5, lr_decay_rate=1.0, model_dir=None, eval_every=60,
+	prefix_parts,
+	batch_size=32, learning_rate=1e-1, accuracy_places=0.5, lr_decay_rate=1.0, eval_every=60,
 	predict=False):
 
+	tf.logging.info("Generating dataset")
+
 	dataset = gen_dataset()
+
+	model_dir = os.path.join("model", *prefix_parts)
 
 	assert len(dataset.train.shape) == 3, f"Train dataset missing dimensions, {dataset.train.shape} {dataset}"
 	assert len(dataset.test.shape) == 3, f"Test dataset missing dimensions, {dataset.test.shape} {dataset}"
@@ -72,7 +77,7 @@ def run_experiment(task, network, gen_dataset, training_steps,
 			"features": features,
 			"prediction": predictions,
 			"label": labels,
-			"delta_vec": delta_vec
+			"delta_vec": delta_vec,
 		}
 
 		return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, eval_metric_ops=metrics, predictions=predictions, training_hooks=hooks)
@@ -130,26 +135,28 @@ def run_all(training_steps=30_000):
 		for nk, network in networks.items():
 			for dk, gen_dataset in datasets.items():
 				for tk, task in tasks.items():
+					try:
+						setup = [tk, dk, nk.type, str(nk.layers), nk.activation]	
 
-					setup = [tk, dk, nk.type, str(nk.layers), nk.activation]	
+						print("Finding best result for", setup)
 
-					print("Finding best result for", setup)
+						if len(results) > 0:
+							lslr = results[-1]["lr"]
+						else:
+							lslr = None
 
-					if len(results) > 0:
-						lslr = results[-1]["lr"]
-					else:
-						lslr = None
+						result = grid_then_long(task, network, gen_dataset, setup, training_steps=training_steps, last_successful_lr=lslr)
 
-					result = grid_then_long(task, network, gen_dataset, setup, training_steps=training_steps, last_successful_lr=lslr)
-
-					row = setup + [
-						result["accuracy_pct"], result["accuracy"], result["loss"], 
-						result["lr"], result["global_step"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-					]
-					results.append(result)
-					writer.writerow(row)
-					csvfile.flush()
-					print(row)
+						row = setup + [
+							result["accuracy_pct"], result["accuracy"], result["loss"], 
+							result["lr"], result["global_step"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+						]
+						results.append(result)
+						writer.writerow(row)
+						csvfile.flush()
+						print(row)
+					except:
+						pass
 
 def LRRange(mul=3):
 
@@ -185,16 +192,24 @@ def LRRange(mul=3):
 	# 	yield lr
 
 
-def grid_then_long(task, network, gen_dataset, prefix_parts, training_steps=10_000, last_successful_lr=None):
+def grid_then_long(task, network, gen_dataset, prefix_parts, training_steps=10_000, last_successful_lr=None, **kwargs):
 
 	# tf.logging.set_verbosity("INFO")
 
-	result = grid_best(task, network, gen_dataset, prefix_parts, training_steps=1000, last_successful_lr=last_successful_lr)
+	result = grid_best(task, network, gen_dataset, 
+		prefix_parts, 
+		training_steps=1000, last_successful_lr=last_successful_lr, 
+		**kwargs)
+
 	if result["accuracy"] > ACCURACY_TARGET:
 		return result
 
-	model_dir = os.path.join("model", *prefix_parts, str(result["lr"]), "10_000")
-	result2 = run_experiment(task, network, gen_dataset, training_steps=training_steps, learning_rate=result["lr"], model_dir=model_dir)
+	prefix_parts = prefix_parts + [str(result["lr"]), "10_000"]
+
+	result2 = run_experiment(task, network, gen_dataset, 
+		prefix_parts=prefix_parts,
+		training_steps=training_steps, learning_rate=result["lr"], 
+		**kwargs)
 
 	if result2["accuracy"] > result["accuracy"]:
 		return result2
@@ -202,7 +217,7 @@ def grid_then_long(task, network, gen_dataset, prefix_parts, training_steps=10_0
 		return result
 
 
-def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvement_error_threshold=0.7, training_steps=10_000, last_successful_lr=None):
+def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvement_error_threshold=0.7, training_steps=10_000, last_successful_lr=None, **kwargs):
 
 	# Important: prefix needs to summarise the run uniquely if !use_uuid!
 
@@ -216,13 +231,16 @@ def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvem
 
 	for lr in itertools.chain(lslr(), LRRange()):
 
-		model_dir_parts = ["model", *prefix_parts, str(lr), str(training_steps)]
+		prefix_parts = [*prefix_parts, str(lr), str(training_steps)]
 		if use_uuid:
-			model_dir_parts.append(str(uuid4()))
+			prefix_parts.append(str(uuid4()))
 
-		model_dir = os.path.join(*model_dir_parts)
+		result = run_experiment(task, network, gen_dataset, 
+			prefix_parts=prefix_parts,
+			learning_rate=lr, lr_decay_rate=1.0, 
+			training_steps=training_steps,
+			**kwargs)
 
-		result = run_experiment(task, network, gen_dataset, learning_rate=lr, lr_decay_rate=1.0, training_steps=training_steps, model_dir=model_dir)
 		result["lr"] = lr # Remove rounding corruption etc
 		print("grid_best", lr, result["accuracy_pct"])
 		
@@ -245,11 +263,19 @@ def grid_best(task, network, gen_dataset, prefix_parts, use_uuid=False, improvem
 
 def run_just_one():
 
-	task = tasks["reduce_sum"]
-	gen_dataset = datasets["one_hot"]
-	network = networks[NetworkDescriptor('dense', 1, 'linear')]
+	# tf.logging.set_verbosity("INFO")
 
-	evaluation = run_experiment(task, network, gen_dataset, training_steps=30_000, learning_rate=0.01, predict=True, model_dir=f"./model/run_just/{uuid4()}")
+	task = tasks["logical_xor"]
+	gen_dataset = datasets["many_hot"]
+	network = networks[NetworkDescriptor('dense', 2, 'selu')]
+
+	evaluation = run_experiment(task, network, gen_dataset, 
+		training_steps=30_000,
+		learning_rate=0.001,
+		prefix_parts=["run_just", str(uuid4())],
+		predict=True,
+		)
+
 	print(evaluation)
 
 if __name__ == "__main__":

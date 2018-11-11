@@ -6,10 +6,10 @@ from collections import namedtuple
 from .layers import *
 from .datasets import bus_width
 
-max_depth = 2
+max_depth = 3
 inner_width = bus_width * 2
 
-activations = ["linear", "tanh", "relu", "sigmoid"] #, "selu", 'abs', 'tanh_abs', "softmax"]
+activations = ["linear", "tanh", "relu", "sigmoid" , "selu", 'abs', 'tanh_abs', "softmax"]
 
 networks = {
 }
@@ -40,25 +40,30 @@ def add_dense_network(depth, activation, include_residual=False):
 	r = "_residual" if include_residual else ""
 	networks[NetworkDescriptor('dense'+r, depth, activation)] = d
 
-# Already run
 # for depth in range(1, max_depth+1):
 # 	for activation in activations:
 # 		add_dense_network(depth, activation)
 
+def eye_initializer(shape, dtype, partition_info):
+	return tf.eye(shape[0], shape[1], dtype=dtype)
 
 def multiply(a, b, output_width):
-	a = layer_dense(a, inner_width)
-	b = layer_dense(b, inner_width)
+	a = layer_dense(a, inner_width, name="a_dense")
+	b = layer_dense(b, inner_width, name="b_dense")
 	c = tf.multiply(a,b)
-	return layer_dense(c, output_width)
+	return layer_dense(c, output_width, name="output_dense")
 
-# Already run
 # networks[NetworkDescriptor('multiply', 1, "linear")] = multiply
 
+def multiply_shallow(a, b, output_width):
+	c = tf.multiply(a,b)
+	return layer_dense(c, output_width, name="output_dense")
 
-for depth in [2, 3]:
-	for activation in activations:
-		add_dense_network(depth, activation, True)
+networks[NetworkDescriptor('multiply_simple', 1, "linear")] = multiply_shallow
+
+# for depth in [2, 3]:
+# 	for activation in activations:
+# 		add_dense_network(depth, activation, True)
 
 
 

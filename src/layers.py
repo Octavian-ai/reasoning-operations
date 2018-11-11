@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from .activations import *
 
-def layer_selu(tensor, width, dropout=0.0, name=None):
+def layer_selu(tensor, width, dropout=0.0, name=None, **kwargs):
 
 	if name is None:
 		name_dense = None
@@ -15,19 +15,19 @@ def layer_selu(tensor, width, dropout=0.0, name=None):
 	r = tf.layers.dense(tensor, width, 
 		activation=tf.nn.selu,
 		kernel_initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0), 
-		name=name_dense)
+		name=name_dense, **kwargs)
 
 	if dropout > 0.0:
 		r = tf.contrib.nn.alpha_dropout(r, dropout, name=name_drop)
 
 	return r
 
-def layer_dense(tensor, width:int, activation_str:str="linear", dropout:float=0.0, name:str=None):
+def layer_dense(tensor, width:int, activation_str:str="linear", dropout:float=0.0, name:str=None, **kwargs):
 
 	if activation_str == "selu":
-		return layer_selu(tensor, width, dropout, name)
+		return layer_selu(tensor, width, dropout, name, **kwargs)
 	else:
-		v = tf.layers.dense(tensor, width, activation=ACTIVATION_FNS[activation_str], name=name)
+		v = tf.layers.dense(tensor, width, activation=ACTIVATION_FNS[activation_str], name=name, **kwargs)
 
 		if dropout > 0:
 			v = tf.nn.dropout(v, 1.0-dropout)
