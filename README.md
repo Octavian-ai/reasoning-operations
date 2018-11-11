@@ -1,6 +1,6 @@
-# Experiment into fundamental operations in neural networks
+# Experiment to see how different neural networks perform fundamental reasoning operations
 
-This code explores how basic networks (e.g. dense layers) can perform fundamental computer science operations (logical, arithmetic etc)
+This code explores how basic networks (e.g. dense layers) can perform fundamental reasoning operations (logical, arithmetic etc)
 
 ## Running
 
@@ -39,6 +39,5 @@ logical_and,random_pos,dense,1,linear,100.0%,1.0,1.4269211e-15,0.01,1000,2018-11
 logical_or,random_pos,dense,1,linear,100.0%,1.0,1.4921953e-15,0.01,1000,2018-11-02 16:57:09
 logical_xor,random_pos,dense,1,linear,100.0%,0.9999375,0.0014065175,0.01,100,2018-11-02 16:57:15
 reduce_sum,random_pos,dense,1,tanh,8.0%,0.081,73.873695,0.0010000006,30000,2018-11-02 16:58:48
-reduce_max,random_pos,dense,1,tanh,100.0%,1.0,0.0023283663,0.01,1000,2018-11-02 16:59:26
 
 ```
