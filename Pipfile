@@ -11,7 +11,7 @@ name = "pypi"
 
 [packages]
 
-tensorflow = "==1.12.0"
+tensorflow = "==1.12.2"
 numpy = "*"
 floyd-cli = "*"
 
